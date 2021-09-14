@@ -7,6 +7,10 @@ const cors = require('cors');
 const server = express();
 server.use(cors());
 
+
+// access req.body
+server.use(express.json());
+
 const PORT = process.env.PORT ;
 
 const mongoose = require('mongoose');
@@ -15,7 +19,8 @@ main().catch(err => console.log(err));
 
 let BookModel;
 async function main() {
-  await mongoose.connect('mongodb://localhost:27017/Book'); // test : Database Name
+  // await mongoose.connect('mongodb://localhost:27017/Book'); // test : Database Name
+  await mongoose.connect(process.env.MONGO_URL);
 
 
 const BookSchema = new mongoose.Schema({
@@ -67,6 +72,8 @@ const BookData1 = new BookModel({
   // Routes
   server.get('/', getPageHome);
   server.get('/getBooks', getBookHandeler);
+  server.post('/addBooks', addBookHandeler);
+  server.delete('/deleteBooks/:id', deleteBookHandeler);
 
   // Function Handeler
 
@@ -89,5 +96,43 @@ const BookData1 = new BookModel({
     })
   }
 
+  // http://localhost:3010/addBooks
+  async function addBookHandeler(req,res){
+    console.log(req.body);
+    // const bookName = req.body.bookName;
+    // const email = req.body.email;
+    const{bookName,description,status,email} = req.body ;
+    await BookModel.create({
+      title: bookName,
+      description : description,
+      status: status,
+      email: email,
+      });
+      BookModel.find( {email:email} , (err,result) =>{
+        if (err){
+        console.log('Error !');
+        }
+        else{
+        res.send(result);
+        }
+      })
+  }
+
+  // http://localhost:3010/deleteBooks
+  async function deleteBookHandeler(req,res){
+    const bookId = req.params.id;
+    const email = req.query.email;
+    await BookModel.deleteOne( {_id:bookId} , (err,result) =>{ // we can use *remove* but to prevent depreceted we use *deleteOne*
+       BookModel.find( {email:email} , (err,result) =>{
+        if (err){
+        console.log('Error !');
+        }
+        else{
+        console.log(result);
+        res.send(result);
+        }
+      })
+    })
+  }
 
 server.listen(PORT, () => console.log(`listening on ${PORT}`));
